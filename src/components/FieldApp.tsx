@@ -88,7 +88,32 @@ function Field({ label, value, onChange, step = "0.001", min, suffix }: {
   min?: number;
   suffix?: string;
 }) {
-  const displayValue = Number.isFinite(value) ? String(value) : "";
+  const [text, setText] = useState(Number.isFinite(value) ? String(value) : "");
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setText(Number.isFinite(value) ? String(value) : "");
+    }
+  }, [isEditing, value]);
+
+  const parseText = (nextText: string) => {
+    const normalized = nextText.trim().replace(",", ".");
+    if (!normalized || normalized === "-" || normalized === "." || normalized === "-.") {
+      return Number.NaN;
+    }
+
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed)) {
+      return Number.NaN;
+    }
+
+    if (min != null && parsed < min) {
+      return min;
+    }
+
+    return parsed;
+  };
 
   return (
     <label className="block">
@@ -97,14 +122,21 @@ function Field({ label, value, onChange, step = "0.001", min, suffix }: {
         <input
           className="h-[58px] w-full px-4 text-2xl font-bold text-slate-950 outline-none"
           inputMode="decimal"
-          min={min}
-          step={step}
-          type="number"
-          value={displayValue}
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            onChange(nextValue === "" ? Number.NaN : Number(nextValue));
+          pattern="[0-9.,-]*"
+          type="text"
+          value={text}
+          onBlur={() => {
+            setIsEditing(false);
+            const parsed = parseText(text);
+            setText(Number.isFinite(parsed) ? String(parsed) : "");
+            onChange(parsed);
           }}
+          onChange={(event) => {
+            const nextText = event.target.value;
+            setText(nextText);
+            onChange(parseText(nextText));
+          }}
+          onFocus={() => setIsEditing(true)}
         />
         {suffix ? <span className="shrink-0 px-3 text-base font-bold text-slate-500">{suffix}</span> : null}
       </div>
