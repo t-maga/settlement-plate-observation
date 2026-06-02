@@ -88,6 +88,8 @@ function Field({ label, value, onChange, step = "0.001", min, suffix }: {
   min?: number;
   suffix?: string;
 }) {
+  const displayValue = Number.isFinite(value) ? String(value) : "";
+
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-bold text-slate-700">{label}</span>
@@ -98,8 +100,11 @@ function Field({ label, value, onChange, step = "0.001", min, suffix }: {
           min={min}
           step={step}
           type="number"
-          value={value}
-          onChange={(event) => onChange(Number(event.target.value))}
+          value={displayValue}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+            onChange(nextValue === "" ? Number.NaN : Number(nextValue));
+          }}
         />
         {suffix ? <span className="shrink-0 px-3 text-base font-bold text-slate-500">{suffix}</span> : null}
       </div>
