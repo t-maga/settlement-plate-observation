@@ -179,6 +179,7 @@ export function FieldApp() {
   const [hydrated, setHydrated] = useState(false);
   const [resumeSession, setResumeSession] = useState<LastSession | undefined>();
   const [status, setStatus] = useState("IndexedDBへ自動保存");
+  const [saveMessage, setSaveMessage] = useState("");
   const [routeForm, setRouteForm] = useState({ routeName: "本線", start: 14760, end: 15040, interval: 40 });
   const [positionText, setPositionText] = useState("R3\nR2\nR1\nCL\nL1\nL2\nL3");
   const [bmForm, setBmForm] = useState({ name: "BM-1", elevation: 10, defaultBacksight: 1.5 });
@@ -211,6 +212,15 @@ export function FieldApp() {
       .then(() => setStatus(`保存済み ${new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}`))
       .catch(() => setStatus("保存に失敗しました"));
   }, [data, hydrated]);
+
+  useEffect(() => {
+    if (!saveMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setSaveMessage(""), 4000);
+    return () => window.clearTimeout(timer);
+  }, [saveMessage]);
 
   const routeStations = useMemo(
     () => data.stations.filter((station) => station.routeName === draft.routeName).sort((a, b) => a.value - b.value),
@@ -265,9 +275,6 @@ export function FieldApp() {
     )
     .sort((a, b) => b.measurementDate.localeCompare(a.measurementDate))
     .slice(0, 5);
-  const settlementRanking = [...data.observations]
-    .sort((a, b) => Math.abs(b.settlementAmount) - Math.abs(a.settlementAmount))
-    .slice(0, 5);
 
   const updateDraft = (patch: Partial<Draft>) => {
     setDraft((current) => {
@@ -309,6 +316,7 @@ export function FieldApp() {
   const saveObservation = () => {
     if (!draft.projectName.trim() || !draft.routeName || !draft.stationName || !draft.position || !draft.measurementDate) {
       setStatus("現場名・路線・測点・位置・日付を確認してください");
+      setSaveMessage("未入力があります。現場名・路線・測点・位置・日付を確認してください。");
       return;
     }
 
@@ -379,7 +387,9 @@ export function FieldApp() {
       )
     }));
     updateDraft({ pendingExtension: 0, memo: "" });
-    setStatus(existing ? "同一日データを更新しました" : "観測データを登録しました");
+    const message = existing ? "同一日データを更新しました" : "観測データを登録しました";
+    setStatus(message);
+    setSaveMessage(message);
   };
 
   const addStations = () => {
@@ -540,8 +550,8 @@ export function FieldApp() {
               <List observations={recentAbnormal} empty="異常値はありません" />
             </Section>
 
-            <Section title="沈下量ランキング" icon={<BarChart3 className="h-6 w-6 text-amber-700" />}>
-              <List observations={settlementRanking} empty="観測データがありません" />
+            <Section title="観測履歴" icon={<ClipboardList className="h-6 w-6 text-slate-700" />}>
+              <List observations={data.observations.slice(0, 12)} empty="観測データがありません" />
             </Section>
           </div>
         ) : null}
@@ -704,7 +714,19 @@ export function FieldApp() {
                   onChange={(event) => updateDraft({ memo: event.target.value })}
                 />
               </label>
-              <button className="mt-4 flex min-h-[60px] w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-5 text-xl font-black text-white" onClick={saveObservation}>
+              {saveMessage ? (
+                <div
+                  className={`mt-4 flex min-h-[54px] items-center gap-2 rounded-md border-2 p-3 text-base font-black ${
+                    saveMessage.includes("未入力")
+                      ? "border-amber-300 bg-amber-50 text-amber-950"
+                      : "border-emerald-300 bg-emerald-50 text-emerald-950"
+                  }`}
+                >
+                  {saveMessage.includes("未入力") ? <AlertTriangle className="h-5 w-5 shrink-0" /> : <CheckCircle2 className="h-5 w-5 shrink-0" />}
+                  <span>{saveMessage}</span>
+                </div>
+              ) : null}
+              <button className="mt-4 flex min-h-[60px] w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-5 text-xl font-black text-white shadow-field transition active:translate-y-0.5 active:bg-cyan-800" onClick={saveObservation}>
                 <Save className="h-6 w-6" />
                 観測データ登録
               </button>
